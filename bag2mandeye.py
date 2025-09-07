@@ -124,6 +124,12 @@ def save_data(
         ys = np.array([p.y for p in points], dtype=np.float64)
         zs = np.array([p.z for p in points], dtype=np.float64)
         intensities = np.array([p.intensity for p in points], dtype=np.float32)
+        if intensities.size and 0.0 <= intensities.min() and intensities.max() <= 1.0:
+            # LAS specification stores intensity as unsigned 16-bit. Scale
+            # normalized 0-1 values to the full 0-65535 range before casting
+            # (ASPRS LAS specification, point record format).
+            intensities *= 65535
+        intensities = intensities.astype(np.uint16)
         times = np.array([p.timestamp for p in points], dtype=np.float64) / 1e9
 
         header = laspy.LasHeader(point_format=1, version="1.2")
