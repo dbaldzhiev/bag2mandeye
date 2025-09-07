@@ -1,0 +1,69 @@
+# bag2mandeye
+
+**bag2mandeye** is a Python script to convert a ROS2 bag (sqlite-based) into a Mandeye dataset. It extracts point cloud and IMU data from a ROS2 bag and writes them in the Mandeye controller format, producing `.laz` (point cloud), `.csv` (IMU), and `.sn` (lidar serial number) files for each chunk.
+
+## Features
+
+- Reads ROS2 bags without requiring a ROS2 runtime.
+- Outputs Mandeye-compatible files:
+	- `lidarXXXX.laz` (compressed point cloud)
+	- `imuXXXX.csv` (IMU data)
+	- `lidarXXXX.sn` (lidar serial number)
+- Supports chunking by time (default: 20 seconds per chunk).
+- Optionally interpolates per-point timestamps.
+
+## Installation
+
+Install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+**Note:**
+LAZ compression is supported out-of-the-box via the `laszip` backend, which is included in `requirements.txt`. No extra steps are needed.
+
+## Usage
+
+```sh
+python bag2mandeye.py <input_bag> <output_directory> \
+		--pointcloud_topic <pointcloud_topic> \
+		--imu_topic <imu_topic> \
+		--lidar_sn <serial_number> \
+		--lidar_id <id>
+```
+
+**Example:**
+
+```sh
+python bag2mandeye.py mybag /tmp/out \
+		--pointcloud_topic /livox/lidar \
+		--imu_topic /imu/data \
+		--lidar_sn ABC123
+```
+
+### Arguments
+
+- `<input_bag>`: Path to ROS2 bag (directory containing `metadata.yaml`)
+- `<output_directory>`: Output directory for Mandeye files
+
+### Options
+
+- `--pointcloud_topic`: PointCloud2 topic (default: `/livox/lidar`)
+- `--imu_topic`: IMU topic (default: `/livox/imu`)
+- `--chunk_len`: Chunk length in seconds (default: 20.0)
+- `--emulate_point_ts`: Interpolate timestamps for points (default: False)
+- `--lidar_sn`: Lidar serial number for `.sn` file (default: `ABC123`)
+- `--lidar_id`: Lidar id for `.sn` file (default: `0`)
+
+## Output
+
+Each chunk produces:
+- `lidarXXXX.laz`: Point cloud data
+- `imuXXXX.csv`: IMU data
+- `lidarXXXX.sn`: Lidar serial number and id
+
+## References
+Mandeye format was inferred from public repositories.
+- [mandeye_to_bag](https://github.com/MapsHD/mandeye_to_bag)
+- [mandeye_controller](https://github.com/JanuszBedkowski/mandeye_controller)
