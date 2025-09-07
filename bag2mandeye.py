@@ -120,15 +120,19 @@ def save_data(
 
     written_lidar_path = None
     if points:
-        xs = np.array([p.x for p in points], dtype=np.float64)
-        ys = np.array([p.y for p in points], dtype=np.float64)
-        zs = np.array([p.z for p in points], dtype=np.float64)
+        # Mandeye recorder stores coordinates in meters with 0.1 mm resolution.
+        # PointCloud2 data in ROS bags may be in millimeters, so convert to meters
+        # to avoid unit mismatches.
+        xs = np.array([p.x for p in points], dtype=np.float64) * 0.001
+        ys = np.array([p.y for p in points], dtype=np.float64) * 0.001
+        zs = np.array([p.z for p in points], dtype=np.float64) * 0.001
         intensities = np.array([p.intensity for p in points], dtype=np.float32)
         times = np.array([p.timestamp for p in points], dtype=np.float64) / 1e9
 
         header = laspy.LasHeader(point_format=1, version="1.2")
         header.scales = [0.0001, 0.0001, 0.0001]
-        header.offsets = [float(xs.min()), float(ys.min()), float(zs.min())]
+        # Mandeye recorder uses unoffset coordinates
+        header.offsets = [0.0, 0.0, 0.0]
 
         las = laspy.LasData(header)
         las.x = xs
