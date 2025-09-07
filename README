@@ -23,6 +23,10 @@ pip install -r requirements.txt
 **Note:**
 LAZ compression is supported out-of-the-box via the `laszip` backend, which is included in `requirements.txt`. No extra steps are needed.
 
+### Coordinate units
+
+The converter assumes the input point cloud coordinates are expressed in **millimeters**. They are converted to meters before writing the LAZ files, which use a scale factor of `0.0001` m and zero offsets to match the Mandeye recorder. Make sure your source data uses the same convention to avoid unit mismatches.
+
 ## Usage
 
 ```sh
