@@ -84,20 +84,45 @@ class MandeyePoint:
 
 
 def parse_pointcloud(msg) -> np.ndarray:
-    """Extract x, y, z, intensity from a PointCloud2 message.
+    """Extract x, y, z, intensity and optional time offset from PointCloud2.
 
-    Returns a structured numpy array with fields x, y, z, intensity.
+    Returns a structured numpy array with fields ``x``, ``y``, ``z``,
+    ``intensity`` and, if present in the message, ``offset_time``.
     """
     required = {"x", "y", "z", "intensity"}
-    fieldmap = {f.name: f for f in msg.fields if f.datatype == FLOAT32}
+    fieldmap = {f.name: f for f in msg.fields}
     if not required.issubset(fieldmap):
         missing = required - set(fieldmap)
         raise ValueError(f"PointCloud2 missing fields: {missing}")
 
+    # Detect per-point time offset field, common names for Livox and others
+    offset_field_name = None
+    for candidate in ("offset_time", "t", "time", "timestamp", "time_offset"):
+        if candidate in fieldmap:
+            offset_field_name = candidate
+            break
+
+    names = ["x", "y", "z", "intensity"]
+    formats = ["<f4"] * 4
+    offsets = [fieldmap[n].offset for n in names]
+
+    if offset_field_name:
+        names.append("offset_time")
+        dt = fieldmap[offset_field_name].datatype
+        if dt == FLOAT32:
+            formats.append("<f4")
+        elif dt == 6:  # UINT32
+            formats.append("<u4")
+        elif dt == 5:  # INT32
+            formats.append("<i4")
+        else:  # fallback
+            formats.append("<f4")
+        offsets.append(fieldmap[offset_field_name].offset)
+
     dtype = np.dtype({
-        "names": ["x", "y", "z", "intensity"],
-        "formats": ["<f4"] * 4,
-        "offsets": [fieldmap[n].offset for n in ["x", "y", "z", "intensity"]],
+        "names": names,
+        "formats": formats,
+        "offsets": offsets,
         "itemsize": msg.point_step,
     })
     return np.frombuffer(msg.data, dtype=dtype, count=msg.width * msg.height)
@@ -226,6 +251,7 @@ def convert_bag_to_mandeye(
     imu_topic: str,
     chunk_len: float,
     emulate_point_ts: bool,
+    prefer_offset_ts: bool,
     lidar_sn: str,
     lidar_id: int,
 ) -> None:
@@ -270,9 +296,15 @@ def convert_bag_to_mandeye(
                     num_points = len(arr)
                     header_ts_sec = ts_sec
                     stamp_base = get_nano(msg.header.stamp)
+                    has_offset = "offset_time" in arr.dtype.names
                     for idx in range(num_points):
-                        if emulate_point_ts:
-                            pt_ts = int(get_interpolated_ts(lidar_frame_rate, header_ts_sec, num_points, idx) * 1e9)
+                        if prefer_offset_ts and has_offset:
+                            pt_ts = int(stamp_base + int(arr['offset_time'][idx]))
+                        elif emulate_point_ts:
+                            pt_ts = int(
+                                get_interpolated_ts(lidar_frame_rate, header_ts_sec, num_points, idx)
+                                * 1e9
+                            )
                         else:
                             pt_ts = stamp_base
                         p = MandeyePoint(
@@ -306,7 +338,16 @@ def main():
     parser.add_argument("--pointcloud_topic", default="/livox/lidar")
     parser.add_argument("--imu_topic", default="/livox/imu")
     parser.add_argument("--chunk_len", type=float, default=20.0, help="Chunk length in seconds")
-    parser.add_argument("--emulate_point_ts", action="store_true", help="Interpolate timestamps for points")
+    parser.add_argument(
+        "--emulate_point_ts",
+        action="store_true",
+        help="Interpolate point timestamps if sensor offsets are not used",
+    )
+    parser.add_argument(
+        "--prefer_offset_ts",
+        action="store_true",
+        help="Prefer sensor-provided offset_time for point timestamps (fallback to interpolation)",
+    )
     parser.add_argument("--lidar_sn", default="ABC123", help="Lidar serial number for .sn file")
     parser.add_argument("--lidar_id", type=int, default=0, help="Lidar id for .sn file")
     args = parser.parse_args()
@@ -318,6 +359,7 @@ def main():
         args.imu_topic,
         args.chunk_len,
         args.emulate_point_ts,
+        args.prefer_offset_ts,
         args.lidar_sn,
         args.lidar_id,
     )
