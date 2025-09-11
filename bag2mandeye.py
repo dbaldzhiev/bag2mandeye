@@ -135,6 +135,7 @@ def save_data(
     imu_lines: Sequence[str],
     lidar_sn: str,
     lidar_id: int,
+    input_unit: str,
 ) -> None:
     """Write buffered data to disk in Mandeye format."""
     os.makedirs(output_directory, exist_ok=True)
@@ -146,11 +147,11 @@ def save_data(
     written_lidar_path = None
     if points:
         # Mandeye recorder stores coordinates in meters with 0.1 mm resolution.
-        # PointCloud2 data in ROS bags may be in millimeters, so convert to meters
-        # to avoid unit mismatches.
-        xs = np.array([p.x for p in points], dtype=np.float64) * 0.001
-        ys = np.array([p.y for p in points], dtype=np.float64) * 0.001
-        zs = np.array([p.z for p in points], dtype=np.float64) * 0.001
+        # Convert input units as requested to avoid unit mismatches.
+        scale = 0.001 if input_unit == "mm" else 1.0
+        xs = np.array([p.x for p in points], dtype=np.float64) * scale
+        ys = np.array([p.y for p in points], dtype=np.float64) * scale
+        zs = np.array([p.z for p in points], dtype=np.float64) * scale
         intensities = np.array([p.intensity for p in points], dtype=np.float32)
         if intensities.size and 0.0 <= intensities.min() and intensities.max() <= 1.0:
             # LAS specification stores intensity as unsigned 16-bit. Scale
@@ -267,6 +268,7 @@ def convert_bag_to_mandeye(
     lidar_sn: str,
     lidar_id: int,
     relative_imu_ts: bool,
+    input_unit: str,
 ) -> None:
     """Main conversion routine."""
     lidar_frame_rate = compute_lidar_frame_rate(bag_path, pointcloud_topic) if emulate_point_ts else 0.0
@@ -338,14 +340,30 @@ def convert_bag_to_mandeye(
 
             message_time_sec = ts / 1e9
             if message_time_sec - last_save_timestamp > chunk_len and last_save_timestamp > 0.0:
-                save_data(output_directory, count, buffer_points, buffer_imu, lidar_sn, lidar_id)
+                save_data(
+                    output_directory,
+                    count,
+                    buffer_points,
+                    buffer_imu,
+                    lidar_sn,
+                    lidar_id,
+                    input_unit,
+                )
                 buffer_points.clear()
                 buffer_imu.clear()
                 last_save_timestamp = message_time_sec
                 count += 1
 
     if buffer_points:
-        save_data(output_directory, count, buffer_points, buffer_imu, lidar_sn, lidar_id)
+        save_data(
+            output_directory,
+            count,
+            buffer_points,
+            buffer_imu,
+            lidar_sn,
+            lidar_id,
+            input_unit,
+        )
 
 
 def main():
@@ -372,6 +390,12 @@ def main():
         action="store_true",
         help="Use absolute IMU timestamps instead of starting at zero",
     )
+    parser.add_argument(
+        "--input-unit",
+        choices=["mm", "m"],
+        default="mm",
+        help="Unit of input point cloud coordinates",
+    )
     args = parser.parse_args()
 
     convert_bag_to_mandeye(
@@ -385,6 +409,7 @@ def main():
         args.lidar_sn,
         args.lidar_id,
         not args.absolute_imu_ts,
+        args.input_unit,
     )
 
 
