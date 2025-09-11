@@ -158,7 +158,9 @@ def save_data(
             # (ASPRS LAS specification, point record format).
             intensities *= 65535
         intensities = intensities.astype(np.uint16)
-        times = np.array([p.timestamp for p in points], dtype=np.float64) / 1e9
+        # Mandeye expects per-scan relative timing (gps_time starting at 0)
+        start_ts = points[0].timestamp
+        times = (np.array([p.timestamp for p in points], dtype=np.float64) - start_ts) / 1e9
 
         header = laspy.LasHeader(point_format=1, version="1.2")
         header.scales = [0.0001, 0.0001, 0.0001]
