@@ -266,6 +266,7 @@ def convert_bag_to_mandeye(
     prefer_offset_ts: bool,
     lidar_sn: str,
     lidar_id: int,
+    relative_imu_ts: bool,
 ) -> None:
     """Main conversion routine."""
     lidar_frame_rate = compute_lidar_frame_rate(bag_path, pointcloud_topic) if emulate_point_ts else 0.0
@@ -274,6 +275,7 @@ def convert_bag_to_mandeye(
     buffer_imu: List[str] = []
     last_save_timestamp = 0.0
     last_imu_timestamp = -1.0
+    imu_start_nano = 0
     count = 0
 
     total_messages = get_message_count(bag_path)
@@ -290,8 +292,11 @@ def convert_bag_to_mandeye(
             if topic == imu_topic:
                 msg = TYPESTORE.deserialize_cdr(raw, connection.msgtype)
                 nano = get_nano(msg.header.stamp)
+                if imu_start_nano == 0:
+                    imu_start_nano = nano
+                relative = nano - imu_start_nano if relative_imu_ts else nano
                 line = (
-                    f"{nano} "
+                    f"{relative} "
                     f"{msg.angular_velocity.x} {msg.angular_velocity.y} {msg.angular_velocity.z} "
                     f"{msg.linear_acceleration.x} {msg.linear_acceleration.y} {msg.linear_acceleration.z} "
                     f"{lidar_id} {nano}"
@@ -362,6 +367,11 @@ def main():
     )
     parser.add_argument("--lidar_sn", default="ABC123", help="Lidar serial number for .sn file")
     parser.add_argument("--lidar_id", type=int, default=0, help="Lidar id for .sn file")
+    parser.add_argument(
+        "--absolute_imu_ts",
+        action="store_true",
+        help="Use absolute IMU timestamps instead of starting at zero",
+    )
     args = parser.parse_args()
 
     convert_bag_to_mandeye(
@@ -374,6 +384,7 @@ def main():
         args.prefer_offset_ts,
         args.lidar_sn,
         args.lidar_id,
+        not args.absolute_imu_ts,
     )
 
 
