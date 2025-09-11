@@ -59,6 +59,7 @@ python bag2mandeye.py mybag /tmp/out \
 - `--emulate_point_ts`: Interpolate timestamps for points (default: False)
 - `--lidar_sn`: Lidar serial number for `.sn` file (default: `ABC123`)
 - `--lidar_id`: Lidar id for `.sn` file (default: `0`)
+- `--absolute_imu_ts`: Use absolute IMU timestamps instead of starting at zero (default: False)
 
 ## Output
 
