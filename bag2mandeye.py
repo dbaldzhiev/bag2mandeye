@@ -114,9 +114,10 @@ def save_data(
     """Write buffered data to disk in Mandeye format."""
     os.makedirs(output_directory, exist_ok=True)
 
-    lidar_path = os.path.join(output_directory, f"lidar{count:04d}.laz")
-    imu_path = os.path.join(output_directory, f"imu{count:04d}.csv")
-    sn_path = os.path.join(output_directory, f"lidar{count:04d}.sn")
+    # use same filenames as the C++ converter: pointcloud_XXXX.laz, imu_XXXX.csv, lidar_XXXX.sn
+    lidar_path = os.path.join(output_directory, f"pointcloud_{count:04d}.laz")
+    imu_path = os.path.join(output_directory, f"imu_{count:04d}.csv")
+    sn_path = os.path.join(output_directory, f"lidar_{count:04d}.sn")
 
     written_lidar_path = None
     if points:
@@ -174,9 +175,8 @@ def save_data(
         with open(status_path, "w", encoding="utf-8") as f:
             json.dump(status, f, indent=4)
 
+    # write IMU lines without header to match rosnode output
     with open(imu_path, "w", encoding="utf-8") as f:
-        header = "timestamp gyroX gyroY gyroZ accX accY accZ imuId timestampUnix\n"
-        f.write(header)
         if imu_lines:
             f.write("\n".join(imu_lines) + "\n")
 
@@ -252,11 +252,11 @@ def convert_bag_to_mandeye(
             if topic == imu_topic:
                 msg = TYPESTORE.deserialize_cdr(raw, connection.msgtype)
                 nano = get_nano(msg.header.stamp)
+                # match C++ output: '<nano> gyroX gyroY gyroZ accX accY accZ'
                 line = (
                     f"{nano} "
                     f"{msg.angular_velocity.x} {msg.angular_velocity.y} {msg.angular_velocity.z} "
-                    f"{msg.linear_acceleration.x} {msg.linear_acceleration.y} {msg.linear_acceleration.z} "
-                    f"{lidar_id} {nano}"
+                    f"{msg.linear_acceleration.x} {msg.linear_acceleration.y} {msg.linear_acceleration.z}"
                 )
                 buffer_imu.append(line)
                 last_imu_timestamp = get_sec(msg.header.stamp)
