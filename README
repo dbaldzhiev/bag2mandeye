@@ -23,6 +23,10 @@ pip install -r requirements.txt
 **Note:**
 LAZ compression is supported out-of-the-box via the `laszip` backend, which is included in `requirements.txt`. No extra steps are needed.
 
+### Coordinate units
+
+By default the converter assumes the input point cloud coordinates are expressed in **millimeters** and converts them to meters before writing the LAZ files, which use a scale factor of `0.0001` m and zero offsets to match the Mandeye recorder. If your data is already in meters, pass `--input-unit m` to avoid additional scaling.
+
 ## Usage
 
 ```sh
@@ -53,8 +57,10 @@ python bag2mandeye.py mybag /tmp/out \
 - `--imu_topic`: IMU topic (default: `/livox/imu`)
 - `--chunk_len`: Chunk length in seconds (default: 20.0)
 - `--emulate_point_ts`: Interpolate timestamps for points (default: False)
+- `--input-unit`: Unit of point cloud coordinates, `mm` or `m` (default: `mm`)
 - `--lidar_sn`: Lidar serial number for `.sn` file (default: `ABC123`)
 - `--lidar_id`: Lidar id for `.sn` file (default: `0`)
+- `--absolute_imu_ts`: Use absolute IMU timestamps instead of starting at zero (default: False)
 
 ## Output
 
