@@ -25,7 +25,7 @@ import csv
 import math
 from dataclasses import dataclass
 
-from mcap_ros2.writer import Writer
+from mcap.writer import Writer
 from rosbags.rosbag2 import Reader
 from rosbags.typesys import Stores, get_typestore
 from scipy.spatial.transform import Rotation
@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument("input_bag", help="Path to ROS2 bag (directory)")
     parser.add_argument("output_mcap", help="Output MCAP file path")
     parser.add_argument("output_csv", help="Output CSV file path")
-    parser.add_argument("--imu_topic", default="/imu/data")
+    parser.add_argument("--imu_topic", default="/livox/imu")
     parser.add_argument("--odom_topic", default="/odom")
     args = parser.parse_args()
 
@@ -173,4 +173,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
