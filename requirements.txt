@@ -4,3 +4,5 @@ numpy==2.3.2
 PyYAML==6.0.2
 rosbags==0.10.11
 tqdm==4.67.1
+mcap==0.10.0
+scipy==1.14.1
