@@ -2,6 +2,8 @@
 
 **bag2mandeye** is a Python script to convert a ROS2 bag (sqlite-based) into a Mandeye dataset. It extracts point cloud and IMU data from a ROS2 bag and writes them in the Mandeye controller format, producing `.laz` (point cloud), `.csv` (IMU), and `.sn` (lidar serial number) files for each chunk.
 
+**bag2lidarview** converts a ROS2 bag into a single MCAP file and exports IMU data with pose information to a CSV that can be viewed in LidarView.
+
 ## Features
 
 - Reads ROS2 bags without requiring a ROS2 runtime.
@@ -61,6 +63,14 @@ python bag2mandeye.py mybag /tmp/out \
 - `--lidar_sn`: Lidar serial number for `.sn` file (default: `ABC123`)
 - `--lidar_id`: Lidar id for `.sn` file (default: `0`)
 - `--absolute_imu_ts`: Use absolute IMU timestamps instead of starting at zero (default: False)
+
+## bag2lidarview Usage
+
+```sh
+python bag2lidarview.py <input_bag> <output.mcap> <imu.csv> \
+                --imu_topic <imu_topic> \
+                --odom_topic <odom_topic>
+```
 
 ## Output
 
